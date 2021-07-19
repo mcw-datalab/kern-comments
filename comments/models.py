@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -50,7 +51,9 @@ class CommentManager(models.Manager):
 
 
 class Comment(BaseCommentAbstractModel):
-    parent = models.ForeignKey("self", null=True)
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, related_name="child_comments"
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name=_("user"),
