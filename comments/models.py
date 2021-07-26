@@ -1,7 +1,8 @@
-from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.conf import settings
 from django.db import models
+from django.shortcuts import reverse
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
@@ -47,10 +48,11 @@ class CommentQuerySet(models.QuerySet):
 
 class CommentManager(models.Manager):
     def get_queryset(self):
-        return StudentCaseQuerySet(self.model, using=self._db)
+        return CommentQuerySet(self.model, using=self._db)
 
 
 class Comment(BaseCommentAbstractModel):
+
     parent = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, related_name="child_comments"
     )

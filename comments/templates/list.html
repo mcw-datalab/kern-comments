@@ -1,0 +1,8 @@
+<ol id="comments-comment-list">
+  {% for comment in comment_list %}
+  <li id="comment-{{ comment.id }}">
+    <h4>{{ comment.creation_date }} - {{ comment.user.get_full_name }}</h4>
+    <p>{{ comment.comment }}</p>
+  </li>
+  {% endfor %}
+</ol>

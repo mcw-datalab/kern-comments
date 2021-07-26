@@ -1,0 +1,1 @@
+Portions copyright (c) 2013, Django Software Foundation and individual contributors
