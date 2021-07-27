@@ -8,11 +8,7 @@ Many of these are derivative of or identical to the Django comments contrib modu
 from django import template
 from django.template.loader import render_to_string
 from django.contrib.contenttypes.models import ContentType
-from django.utils.encoding import smart_str
-from django.shortcuts import reverse
 
-
-from comments.forms import CommentForm
 from comments.models import Comment
 
 register = template.Library()
@@ -27,7 +23,7 @@ class BaseCommentNode(template.Node):
 
     @classmethod
     def handle_token(cls, parser, token):
-        """Class method to parse get_comment_list/count/form and return a Node."""
+        """Class method to parse get_comment_list/count and return a Node."""
         tokens = token.split_contents()
         if tokens[1] != "for":
             raise template.TemplateSyntaxError(
@@ -105,17 +101,14 @@ class BaseCommentNode(template.Node):
         if not object_pk:
             return self.comment_model.objects.none()
 
-        qs = self.comment_model.objects.filter(
-            content_type=ctype,
-            object_pk=smart_str(object_pk),
+        return (
+            self.comment_model.objects.select_related("user")
+            .active()
+            .filter(
+                content_type=ctype,
+                object_pk=object_pk,
+            )
         )
-
-        field_names = [f.name for f in self.comment_model._meta.fields]
-        if "is_active" in field_names:
-            qs = qs.select_related("user").filter(is_active=True)
-        if "user" in field_names:
-            qs = qs
-        return qs
 
     def get_target_ctype_pk(self, context):
         if self.object_expr:
@@ -146,70 +139,6 @@ class CommentCountNode(BaseCommentNode):
 
     def get_context_value_from_queryset(self, context, qs):
         return qs.count()
-
-
-class CommentFormNode(BaseCommentNode):
-    """Insert a form for the comment model into the context."""
-
-    def get_form(self, context):
-        obj = self.get_object(context)
-        if obj:
-            return CommentForm(obj)
-        else:
-            return None
-
-    def get_object(self, context):
-        if self.object_expr:
-            try:
-                return self.object_expr.resolve(context)
-            except template.VariableDoesNotExist:
-                return None
-        else:
-            object_pk = self.object_pk_expr.resolve(context, ignore_failures=True)
-            return self.ctype.get_object_for_this_type(pk=object_pk)
-
-    def render(self, context):
-        context[self.as_varname] = self.get_form(context)
-        return ""
-
-
-class RenderCommentFormNode(CommentFormNode):
-    """Render the comment form directly"""
-
-    @classmethod
-    def handle_token(cls, parser, token):
-        """Class method to parse render_comment_form and return a Node."""
-        tokens = token.split_contents()
-        if tokens[1] != "for":
-            raise template.TemplateSyntaxError(
-                "Second argument in %r tag must be 'for'" % tokens[0]
-            )
-
-        # {% render_comment_form for obj %}
-        if len(tokens) == 3:
-            return cls(object_expr=parser.compile_filter(tokens[2]))
-
-        # {% render_comment_form for app.models pk %}
-        elif len(tokens) == 4:
-            return cls(
-                ctype=BaseCommentNode.lookup_content_type(tokens[2], tokens[0]),
-                object_pk_expr=parser.compile_filter(tokens[3]),
-            )
-
-    def render(self, context):
-        ctype, object_pk = self.get_target_ctype_pk(context)
-        if object_pk:
-            template_search_list = [
-                "comments/%s/%s/form.html" % (ctype.app_label, ctype.model),
-                "comments/%s/form.html" % ctype.app_label,
-                "comments/form.html",
-            ]
-            context_dict = context.flatten()
-            context_dict["form"] = self.get_form(context)
-            formstr = render_to_string(template_search_list, context_dict)
-            return formstr
-        else:
-            return ""
 
 
 class RenderCommentListNode(CommentListNode):
@@ -321,45 +250,6 @@ def render_comment_list(parser, token):
 
     """
     return RenderCommentListNode.handle_token(parser, token)
-
-
-@register.tag
-def get_comment_form(parser, token):
-    """
-    Get a (new) form object to post a new comment.
-
-    Syntax::
-
-        {% get_comment_form for [object] as [varname] %}
-        {% get_comment_form for [app].[model] [object_id] as [varname] %}
-    """
-    return CommentFormNode.handle_token(parser, token)
-
-
-@register.tag
-def render_comment_form(parser, token):
-    """
-    Render the comment form (as returned by ``{% render_comment_form %}``) through
-    the ``comments/form.html`` template.
-
-    Syntax::
-
-        {% render_comment_form for [object] %}
-        {% render_comment_form for [app].[model] [object_id] %}
-    """
-    return RenderCommentFormNode.handle_token(parser, token)
-
-
-@register.simple_tag
-def comment_form_target():
-    """
-    Get the target URL for the comment form.
-
-    Example::
-
-        <form action="{% comment_form_target %}" method="post">
-    """
-    return reverse("comments-post-comment")
 
 
 @register.simple_tag

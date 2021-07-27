@@ -7,7 +7,7 @@ urlpatterns = [
     path(
         "/<int:content_type>/<int:object_pk>/",
         CommentView.as_view(),
-        name="comments_create",
+        name="comment",
     ),
     path(
         "/<int:content_type>/<int:object_pk>/<int:comment_id>/",
