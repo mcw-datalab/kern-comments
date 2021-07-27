@@ -2,10 +2,9 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.db import models
-from django.shortcuts import reverse
-from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
+from jsonschema import validate, ValidationError
 
 COMMENT_MAX_LENGTH = getattr(settings, "COMMENT_MAX_LENGTH", 3000)
 
@@ -16,15 +15,14 @@ class BaseCommentAbstractModel(models.Model):
     subclass.
     """
 
-    # Content-object field
     content_type = models.ForeignKey(
         ContentType,
         verbose_name=_("content type"),
         related_name="content_type_set_for_%(class)s",
         on_delete=models.CASCADE,
     )
-    object_pk = models.CharField(_("object ID"), db_index=True, max_length=64)
-    content = GenericForeignKey(ct_field="content_type", fk_field="object_pk")
+    object_pk = models.PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_pk")
 
     class Meta:
         abstract = True
@@ -42,7 +40,7 @@ class CommentQuerySet(models.QuerySet):
         ct = ContentType.objects.get_for_model(model)
         queryset = self.filter(content_type=ct)
         if isinstance(model, models.Model):
-            return queryset.filter(object_pk=force_str(model._get_pk_val()))
+            return queryset.filter(object_pk=model._get_pk_val())
         return queryset
 
 
@@ -53,9 +51,19 @@ class CommentManager(models.Manager):
 
 class Comment(BaseCommentAbstractModel):
 
-    parent = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, related_name="child_comments"
-    )
+    JSON_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "comment": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": COMMENT_MAX_LENGTH,
+                "required": True,
+            },
+            "parent_id": {"type": "integer", "required": False},
+        },
+    }
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name=_("user"),
@@ -65,6 +73,10 @@ class Comment(BaseCommentAbstractModel):
         on_delete=models.CASCADE,
     )
     comment = models.TextField(_("comment"), max_length=COMMENT_MAX_LENGTH)
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, related_name="child_comments"
+    )
+
     creation_date = models.DateTimeField(auto_now_add=True)
     modifed_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -76,10 +88,10 @@ class Comment(BaseCommentAbstractModel):
         verbose_name = _("Comment")
         verbose_name_plural = _("Comments")
 
-    def get_content_object_url(self):
-        """
-        Get a URL suitable for redirecting to the content object.
-        """
-        return reverse(
-            "comments-url-redirect", args=(self.content_type_id, self.object_pk)
-        )
+    @classmethod
+    def validate_json(cls, body):
+        try:
+            validate(body, cls.JSON_SCHEMA)
+            return True, ""
+        except ValidationError as e:
+            return False, e.message
