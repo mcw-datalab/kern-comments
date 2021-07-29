@@ -8,6 +8,8 @@ import bleach
 
 from .models import Comment
 from .target import get_target_object_or_none
+from .permissions import get_registry
+from .serializers import ExtendedEncoder
 
 
 def _sanitize_and_linkify(text, **clean_kwargs):
@@ -16,34 +18,49 @@ def _sanitize_and_linkify(text, **clean_kwargs):
 
 
 def _build_error_response(message, status):
-    return JsonResponse({"error": message}, status=404)
+    return JsonResponse({"error": str(message)}, status=status)
+
+
+class JSONResponse(JsonResponse):
+    def __init__(
+        self,
+        data,
+        encoder=ExtendedEncoder,
+        safe=False,
+        json_dumps_params=None,
+        **kwargs
+    ):
+        super().__init__(data, encoder, safe, json_dumps_params, **kwargs)
 
 
 class CommentView(View):
+
+    perms = get_registry().RootPermissions
+
     def get(self, request, *args, **kwargs):
         content_type = kwargs["content_type"]
         object_pk = kwargs["object_pk"]
 
         # check permission before doing any processing
-        if not self.can_list_comments(request, content_type, object_pk):
+        if not self.perms.can_list_comments(request, content_type, object_pk):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        target = get_target_object_or_none(content_type, object_pk)
+        content_type, target = get_target_object_or_none(content_type, object_pk)
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 
         comments = Comment.objects.for_model(target).active().all()
-        return JsonResponse(comments)
+        return JSONResponse(comments)
 
     def post(self, request, *args, **kwargs):
-        content_type = kwargs["content_type"]
+        content_type_id = kwargs["content_type"]
         object_pk = kwargs["object_pk"]
 
         # check permission before doing any processing
-        if not self.can_create_comment(request, content_type, object_pk):
+        if not self.perms.can_create_comment(request, content_type_id, object_pk):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        target = get_target_object_or_none(content_type, object_pk)
+        content_type, target = get_target_object_or_none(content_type_id, object_pk)
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 
@@ -69,24 +86,21 @@ class CommentView(View):
             parent=parent,
             comment=body["comment"],
         )
-        return JsonResponse(instance)
-
-    def can_create_comment(self, request, content_type, object_pk):
-        """Subclasses should override this"""
-        return False
-
-    def can_list_comments(self, request, content_type, object_pk):
-        return False
+        print(instance)
+        return JSONResponse(instance)
 
 
 class CommentDetailView(View):
+
+    perms = get_registry().DetailPermissions
+
     def get(self, request, *args, **kwargs):
         content_type = kwargs["content_type"]
         object_pk = kwargs["object_pk"]
         comment_id = kwargs["comment_id"]
 
         # check permission
-        if not self.can_get_comment(request, content_type, object_pk, comment_id):
+        if not self.perms.can_get_comment(request, content_type, object_pk, comment_id):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(Comment.objects.active(), pk=comment_id)
@@ -98,7 +112,9 @@ class CommentDetailView(View):
         comment_id = kwargs["comment_id"]
 
         # check permission
-        if not self.can_get_comment(request, content_type, object_pk, comment_id):
+        if not self.perms.can_update_comment(
+            request, content_type, object_pk, comment_id
+        ):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(
@@ -120,7 +136,7 @@ class CommentDetailView(View):
         comment_id = kwargs["comment_id"]
 
         # check permission
-        if not self.can_get_comment(request, content_type, object_pk, comment_id):
+        if not self.perms.can_get_comment(request, content_type, object_pk, comment_id):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(
@@ -129,15 +145,3 @@ class CommentDetailView(View):
         comment.is_active = False
         comment.save()
         return HttpResponse(status=204)  # no content
-
-    def can_get_comment(self, request, content_type, object_pk, comment_id):
-        """Subclasses should override this"""
-        return False
-
-    def can_update_comment(self, request, content_type, object_pk, comment_id):
-        """Subclasses should override this"""
-        return False
-
-    def can_delete_comment(self, request, content_type, object_pk, comment_id):
-        """Subclasses should override this"""
-        return False
