@@ -1,0 +1,176 @@
+<!DOCTYPE html>{% load comments %}
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <style>
+      [x-cloak] {
+        display: none !important;
+      }
+      p {
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div x-data="foo()">
+      <h1>{{ post.name }}</h1>
+      <div x-show="Object.keys(comments).length > 0">
+        {% get_comment_count for post as count %}
+        <h3>Comments ({{ count }})</h3>
+        <ol>
+          <template x-for="comment in Object.values(comments)">
+            <li>
+              <div x-show="editID !== comment.id">
+                <p x-text="comment.comment"></p>
+                <button x-on:click="editID = comment.id">Edit</button
+                >&nbsp;<button x-on:click="remove(comment.id)">Delete</button>
+              </div>
+              <div x-show="editID == comment.id">
+                <textarea
+                  id="comment"
+                  x-model="comment.comment"
+                  rows="8"
+                ></textarea>
+                <button x-on:click="editID = -1">Cancel</button>&nbsp;<button
+                  x-on:click="save()"
+                >
+                  Save
+                </button>
+              </div>
+            </li>
+          </template>
+        </ol>
+      </div>
+      <div>
+        <textarea id="comment" x-model="comment" rows="8"></textarea>
+      </div>
+      <div>
+        <button x-on:click="post()">Post</button>
+      </div>
+      {% get_content_type post as obj %}
+    </div>
+    <script>
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+      const csrftoken = getCookie("csrftoken");
+      const req = (url) =>
+        new Request(url, {
+          headers: { "X-CSRFToken": csrftoken },
+        });
+
+      function foo() {
+        return {
+          comment: "",
+          comments: {},
+          editID: 0,
+          init() {
+            fetch(
+              req(
+                "{% url 'comments:comment' content_type=obj.id object_pk=post.id %}"
+              ),
+              {
+                method: "GET",
+              }
+            )
+              .then((response) =>
+                response.ok ? response.json() : Promise.reject(response)
+              )
+              .then((data) => {
+                this.comments = data.reduce(
+                  (acc, cur) => ({ ...acc, [cur.id]: cur }),
+                  {}
+                );
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+          post(parentID) {
+            fetch(
+              req(
+                "{% url 'comments:comment' content_type=obj.id object_pk=post.id %}"
+              ),
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  comment: this.comment,
+                  parentID,
+                }),
+              }
+            )
+              .then((response) =>
+                response.ok ? response.json() : Promise.reject(response)
+              )
+              .then((data) => {
+                this.comments[data.id] = data;
+                this.comment = "";
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+          remove(commentID) {
+            console.log("hey");
+            fetch(
+              req(
+                `{% url 'comments:comment' content_type=obj.id object_pk=post.id %}${commentID}/`
+              ),
+              {
+                method: "DELETE",
+              }
+            )
+              .then((response) =>
+                response.ok
+                  ? delete this.comments[commentID]
+                  : Promise.reject(response)
+              )
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+          save() {
+            const comment = this.comments[this.editID];
+            fetch(
+              req(
+                `{% url 'comments:comment' content_type=obj.id object_pk=post.id %}${this.editID}/`
+              ),
+              {
+                method: "PUT",
+                body: JSON.stringify({
+                  comment: comment.comment,
+                }),
+              }
+            )
+              .then((response) =>
+                response.ok ? response.json() : Promise.reject(response)
+              )
+              .then((data) => {
+                this.comments[this.editID] = data;
+                this.editID = -1;
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

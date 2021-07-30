@@ -136,8 +136,3 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
-# dev project
-public/
-kern_comments/
-manage.py
