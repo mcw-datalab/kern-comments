@@ -32,11 +32,6 @@ class CommentQuerySet(models.QuerySet):
     def active(self):
         return self.filter(is_active=True)
 
-
-class CommentManager(models.Manager):
-    def get_queryset(self):
-        return CommentQuerySet(self.model, using=self._db)
-
     def for_model(self, model):
         """
         QuerySet for all comments for a particular model (either an instance or
@@ -59,7 +54,7 @@ class Comment(BaseCommentAbstractModel):
                 "minLength": 1,
                 "maxLength": COMMENT_MAX_LENGTH,
             },
-            "parent_id": {"type": "integer"},
+            "parentID": {"type": "integer"},
         },
         "required": ["comment"],
     }
@@ -81,7 +76,7 @@ class Comment(BaseCommentAbstractModel):
     modifed_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
-    objects = CommentManager()
+    objects = CommentQuerySet.as_manager()
 
     class Meta:
         ordering = ("creation_date",)
