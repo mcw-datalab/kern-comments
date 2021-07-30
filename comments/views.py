@@ -18,7 +18,7 @@ def _sanitize_and_linkify(text, **clean_kwargs):
 
 
 def _build_error_response(message, status):
-    return JsonResponse({"error": str(message)}, status=status)
+    return JSONResponse({"error": str(message)}, status=status)
 
 
 class JSONResponse(JsonResponse):
@@ -86,7 +86,6 @@ class CommentView(View):
             parent=parent,
             comment=body["comment"],
         )
-        print(instance)
         return JSONResponse(instance)
 
 
@@ -104,7 +103,7 @@ class CommentDetailView(View):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(Comment.objects.active(), pk=comment_id)
-        return JsonResponse(comment)
+        return JSONResponse(comment)
 
     def put(self, request, *args, **kwargs):
         content_type = kwargs["content_type"]
@@ -121,12 +120,16 @@ class CommentDetailView(View):
             Comment.objects.active(), pk=comment_id, user=request.user
         )
         body = json.loads(request.body)
+        is_valid, err = Comment.validate_json(body)
+        if not is_valid:
+            return _build_error_response(err, 400)  # bad request
+
         # do this first so we don't need to check len until after sanitization
         text = _sanitize_and_linkify(body.get("comment", ""))
         if text:
             comment.comment = text
             comment.save()
-            return JsonResponse(comment)
+            return JSONResponse(comment)
         else:
             return HttpResponseNotModified()
 
