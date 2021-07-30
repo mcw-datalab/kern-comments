@@ -7,7 +7,7 @@ from django.views import View
 import bleach
 
 from .models import Comment
-from .target import get_target_object_or_none
+from .target import get_content_type_and_target_or_none
 from .permissions import get_registry
 from .serializers import ExtendedEncoder
 
@@ -45,7 +45,9 @@ class CommentView(View):
         if not self.perms.can_list_comments(request, content_type, object_pk):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        content_type, target = get_target_object_or_none(content_type, object_pk)
+        content_type, target = get_content_type_and_target_or_none(
+            content_type, object_pk
+        )
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 
@@ -60,7 +62,9 @@ class CommentView(View):
         if not self.perms.can_create_comment(request, content_type_id, object_pk):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        content_type, target = get_target_object_or_none(content_type_id, object_pk)
+        content_type, target = get_content_type_and_target_or_none(
+            content_type_id, object_pk
+        )
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 

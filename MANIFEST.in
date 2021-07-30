@@ -1,4 +1,7 @@
 include LICENSE
 include README.rst
 recursive-include comments/static *
+recursive-include comments/static *
 recursive-include comments/templates *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

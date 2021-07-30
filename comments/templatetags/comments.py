@@ -258,14 +258,3 @@ def get_content_type(obj):
     {% get_content_type for [object] %}
     """
     return ContentType.objects.get_for_model(obj)
-
-
-@register.simple_tag
-def get_comment_permalink(comment):
-    """
-    Get the permalink for a comment.
-
-    Example::
-        {% get_comment_permalink comment %}
-    """
-    return comment.get_absolute_url()

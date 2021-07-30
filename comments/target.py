@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 
 
-def get_target_object_or_none(content_type_id, object_pk):
+def get_content_type_and_target_or_none(content_type_id, object_pk):
     try:
         content_type = ContentType.objects.get_for_id(content_type_id)
         model = content_type.model_class()
