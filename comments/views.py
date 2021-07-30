@@ -49,7 +49,7 @@ class CommentView(View):
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 
-        comments = Comment.objects.for_model(target).active().all()
+        comments = Comment.objects.for_model(target).active()
         return JSONResponse(comments)
 
     def post(self, request, *args, **kwargs):
@@ -73,7 +73,7 @@ class CommentView(View):
             return _build_error_response(err, 400)  # bad request
 
         parent = None
-        parent_id = body.get("parent_id", None)
+        parent_id = body.get("parentID", None)
         if parent_id is not None:
             parent = Comment.objects.for_model(target).filter(id=parent_id).first()
             if parent is None:
@@ -118,7 +118,7 @@ class CommentDetailView(View):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(
-            Comment.objects.active(), pk=kwargs["pk"], user=request.user
+            Comment.objects.active(), pk=comment_id, user=request.user
         )
         body = json.loads(request.body)
         # do this first so we don't need to check len until after sanitization
@@ -140,7 +140,7 @@ class CommentDetailView(View):
             return _build_error_response("Permission denied", 403)  # forbidden
 
         comment = get_object_or_404(
-            Comment.objects.active(), pk=kwargs["pk"], user=request.user
+            Comment.objects.active(), pk=comment_id, user=request.user
         )
         comment.is_active = False
         comment.save()
