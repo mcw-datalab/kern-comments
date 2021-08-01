@@ -1,4 +1,4 @@
-from comments.permissions import get_registry, RootPerms, DetailPerms
+from comments.permissions import RootPerms, DetailPerms
 
 
 class Root(RootPerms):
@@ -18,8 +18,3 @@ class Detail(DetailPerms):
 
     def can_delete_comment(self, request, content_type, object_pk, comment_id):
         return True
-
-
-def init_permissions():
-    registry = get_registry()
-    registry.set_permissions(root=Root(), detail=Detail())
