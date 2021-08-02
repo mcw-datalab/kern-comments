@@ -128,5 +128,5 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-COMMENT_ROOT_PERMISSIONS = "public.permissions.Root"
-COMMENT_DETAIL_PERMISSIONS = "public.permissions.Detail"
+COMMENT_VIEW_PERMISSIONS = "public.permissions.Root"
+COMMENT_DETAIL_VIEW_PERMISSIONS = "public.permissions.Detail"

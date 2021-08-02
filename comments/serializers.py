@@ -28,9 +28,12 @@ def model_to_dict(instance, fields=None, exclude=None):
 
 
 class ExtendedEncoder(DjangoJSONEncoder):
+
+    EXCLUDE_FIELDS = ["content_object"]
+
     def default(self, o):
         if isinstance(o, Model):
-            return model_to_dict(o, exclude=["content_object"])
+            return model_to_dict(o, exclude=self.EXCLUDE_FIELDS)
         if isinstance(o, QuerySet):
-            return [model_to_dict(x, exclude=["content_object"]) for x in o]
+            return [model_to_dict(x, exclude=self.EXCLUDE_FIELDS) for x in o]
         return super().default(o)

@@ -35,11 +35,13 @@ class JSONResponse(JsonResponse):
 
 class CommentView(View):
 
-    perms = get_registry().RootPermissions
+    perms = get_registry().RootViewPermissions
 
     def get(self, request, *args, **kwargs):
         content_type = kwargs["content_type"]
         object_pk = kwargs["object_pk"]
+
+        print(kwargs, self.perms)
 
         # check permission before doing any processing
         if not self.perms.can_list_comments(request, content_type, object_pk):
@@ -72,6 +74,7 @@ class CommentView(View):
         # do this first so we don't need to check len until after sanitization
         body["comment"] = _sanitize_and_linkify(body.get("comment", ""))
 
+        # validated against schema
         is_valid, err = Comment.validate_json(body)
         if not is_valid:
             return _build_error_response(err, 400)  # bad request
@@ -95,7 +98,7 @@ class CommentView(View):
 
 class CommentDetailView(View):
 
-    perms = get_registry().DetailPermissions
+    perms = get_registry().DetailViewPermissions
 
     def get(self, request, *args, **kwargs):
         content_type = kwargs["content_type"]
@@ -123,6 +126,8 @@ class CommentDetailView(View):
         comment = get_object_or_404(
             Comment.objects.active(), pk=comment_id, user=request.user
         )
+
+        # validated against schema
         body = json.loads(request.body)
         is_valid, err = Comment.validate_json(body)
         if not is_valid:

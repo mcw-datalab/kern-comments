@@ -4,15 +4,18 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 
-class RootPerms:
+class CommentViewPermissions:
+    """Permissions applied to CommentView"""
+
     def can_list_comments(self, request, content_type, object_pk):
+        print("here")
         return False
 
     def can_create_comment(self, request, content_type, object_pk):
         return False
 
 
-class DetailPerms:
+class CommentDetailViewPermissions:
     def can_get_comment(self, request, content_type, object_pk, comment_id):
         return False
 
@@ -23,16 +26,18 @@ class DetailPerms:
         return False
 
 
-COMMENT_ROOT_PERMISSIONS = getattr(settings, "COMMENT_ROOT_PERMISSIONS", RootPerms)
-COMMENT_DETAIL_PERMISSIONS = getattr(
-    settings, "COMMENT_DETAIL_PERMISSIONS", DetailPerms
+COMMENT_VIEW_PERMISSIONS = getattr(
+    settings, "COMMENT_VIEW_PERMISSIONS", CommentViewPermissions
+)
+COMMENT_DETAIL_VIEW_PERMISSIONS = getattr(
+    settings, "COMMENT_DETAIL_VIEW_PERMISSIONS", CommentDetailViewPermissions
 )
 
 
 class PermissionRegistry:
     def __init__(self):
-        self.RootPermissions = self._import_class(COMMENT_ROOT_PERMISSIONS)
-        self.DetailPermissions = self._import_class(COMMENT_DETAIL_PERMISSIONS)
+        self.RootViewPermissions = self._import_class(COMMENT_VIEW_PERMISSIONS)
+        self.DetailViewPermissions = self._import_class(COMMENT_DETAIL_VIEW_PERMISSIONS)
 
     def _import_class(self, klass):
         if callable(klass):
@@ -40,7 +45,7 @@ class PermissionRegistry:
         try:
             mod_name, func_name = self._split_module_path(klass)
             mod = import_module(mod_name)
-            return getattr(mod, func_name)
+            return getattr(mod, func_name)()
         except ImportError as e:
             raise ImproperlyConfigured(f"{klass} refers to a non-existent package: {e}")
         raise ImproperlyConfigured("klass must be a string or callable")
