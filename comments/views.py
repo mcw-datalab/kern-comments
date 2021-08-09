@@ -1,7 +1,9 @@
 import json
 
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpResponseNotModified
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django.views import View
 
 import bleach
@@ -33,6 +35,10 @@ class JSONResponse(JsonResponse):
         super().__init__(data, encoder, safe, json_dumps_params, **kwargs)
 
 
+VIEW_DECORATORS = [login_required]
+
+
+@method_decorator(VIEW_DECORATORS, name="dispatch")
 class CommentView(View):
 
     perms = get_registry().RootViewPermissions
@@ -94,6 +100,7 @@ class CommentView(View):
         return JSONResponse(instance)
 
 
+@method_decorator(VIEW_DECORATORS, name="dispatch")
 class CommentDetailView(View):
 
     perms = get_registry().DetailViewPermissions
