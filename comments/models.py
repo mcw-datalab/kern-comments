@@ -9,25 +9,6 @@ from jsonschema import validate, ValidationError
 COMMENT_MAX_LENGTH = getattr(settings, "COMMENT_MAX_LENGTH", 3000)
 
 
-class BaseCommentAbstractModel(models.Model):
-    """
-    An abstract base class that any custom comment models probably should
-    subclass.
-    """
-
-    content_type = models.ForeignKey(
-        ContentType,
-        verbose_name=_("content type"),
-        related_name="content_type_set_for_%(class)s",
-        on_delete=models.CASCADE,
-    )
-    object_pk = models.PositiveIntegerField()
-    content_object = GenericForeignKey("content_type", "object_pk")
-
-    class Meta:
-        abstract = True
-
-
 class CommentQuerySet(models.QuerySet):
     def active(self):
         return self.filter(is_active=True)
@@ -44,7 +25,7 @@ class CommentQuerySet(models.QuerySet):
         return queryset
 
 
-class Comment(BaseCommentAbstractModel):
+class Comment(models.Model):
 
     JSON_SCHEMA = {
         "type": "object",
@@ -58,6 +39,15 @@ class Comment(BaseCommentAbstractModel):
         },
         "required": ["comment"],
     }
+
+    content_type = models.ForeignKey(
+        ContentType,
+        verbose_name=_("content type"),
+        related_name="content_type_set_for_%(class)s",
+        on_delete=models.CASCADE,
+    )
+    object_pk = models.PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_pk")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
