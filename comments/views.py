@@ -41,8 +41,6 @@ class CommentView(View):
         content_type = kwargs["content_type"]
         object_pk = kwargs["object_pk"]
 
-        print(kwargs, self.perms)
-
         # check permission before doing any processing
         if not self.perms.can_list_comments(request, content_type, object_pk):
             return _build_error_response("Permission denied", 403)  # forbidden

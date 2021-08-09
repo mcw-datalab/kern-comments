@@ -8,7 +8,6 @@ class CommentViewPermissions:
     """Permissions applied to CommentView"""
 
     def can_list_comments(self, request, content_type, object_pk):
-        print("here")
         return False
 
     def can_create_comment(self, request, content_type, object_pk):
