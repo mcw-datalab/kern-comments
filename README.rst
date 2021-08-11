@@ -1,6 +1,6 @@
-=====
-Comments
-=====
+=============
+Kern Comments
+=============
 
 Comments is a Django app to to collect comments from users.
 
