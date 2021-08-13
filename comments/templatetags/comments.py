@@ -258,3 +258,11 @@ def get_content_type(obj):
     {% get_content_type for [object] %}
     """
     return ContentType.objects.get_for_model(obj)
+
+
+@register.simple_tag
+def get_content_type_by_natural_key(app_name, model_name):
+    """
+    {% get_content_type_by_natural_key for [app_name] [model_name] %}
+    """
+    return ContentType.objects.get_by_natural_key(app_name, model_name)
