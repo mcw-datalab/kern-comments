@@ -69,10 +69,9 @@
         }
         return cookieValue;
       }
-      const csrftoken = getCookie("csrftoken");
       const req = (url) =>
         new Request(url, {
-          headers: { "X-CSRFToken": csrftoken },
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
         });
 
       function foo() {
@@ -127,7 +126,6 @@
               });
           },
           remove(commentID) {
-            console.log("hey");
             fetch(
               req(
                 `{% url 'comments:comment' content_type=obj.id object_pk=post.id %}${commentID}/`
