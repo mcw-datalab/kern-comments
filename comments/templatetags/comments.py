@@ -79,6 +79,7 @@ class BaseCommentNode(template.Node):
         object_expr=None,
         as_varname=None,
         comment=None,
+        user_expr=None,
     ):
         if ctype is None and object_expr is None:
             raise template.TemplateSyntaxError(
@@ -90,6 +91,7 @@ class BaseCommentNode(template.Node):
         self.object_pk_expr = object_pk_expr
         self.object_expr = object_expr
         self.comment = comment
+        self.user_expr = user_expr
 
     def render(self, context):
         qs = self.get_queryset(context)
@@ -183,6 +185,35 @@ class RenderCommentListNode(CommentListNode):
             return ""
 
 
+class CommentLisForUserObjecttNode(CommentListNode):
+    """Return the comments associated with this user for the object"""
+
+    @classmethod
+    def handle_token(cls, parser, token):
+        """Class method to parse get_comment_list_for_user_object and return a Node."""
+        tokens = token.split_contents()
+        if tokens[1] != "for":
+            raise template.TemplateSyntaxError(
+                "Second argument in %r tag must be 'for'" % tokens[0]
+            )
+
+        # {% get_comment_list_for_user_object for user obj as comment_list %}
+        if len(tokens) == 6:
+            return cls(
+                user_expr=parser.compile_filter(tokens[2]),
+                object_expr=parser.compile_filter(tokens[3]),
+                as_varname=tokens[5],
+            )
+        else:
+            raise template.TemplateSyntaxError(
+                "%r tag requires 5 arguments exactly" % tokens[0]
+            )
+
+    def get_context_value_from_queryset(self, context, qs):
+        user = self.user_expr.resolve(context)
+        return qs.filter(user=user)
+
+
 # We could just register each classmethod directly, but then we'd lose out on
 # the automagic docstrings-into-admin-docs tricks. So each node gets a cute
 # wrapper function that just exists to hold the docstring.
@@ -231,6 +262,28 @@ def get_comment_list(parser, token):
 
     """
     return CommentListNode.handle_token(parser, token)
+
+
+@register.tag
+def get_comment_list_for_user_object(parser, token):
+    """
+    Gets the list of comments for the given params and populates the template
+    context with a variable containing that value, whose name is defined by the
+    'as' clause.
+
+    Syntax::
+
+        {% get_comment_list_for_user_object for [user] [object] as [varname]  %}
+
+    Example usage::
+
+        {% get_comment_list_for_user_object for request.user event as user_event_list %}
+        {% for comment in user_event_list %}
+            ...
+        {% endfor %}
+
+    """
+    return CommentLisForUserObjecttNode.handle_token(parser, token)
 
 
 @register.tag
