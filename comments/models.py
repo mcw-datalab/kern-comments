@@ -59,7 +59,11 @@ class Comment(models.Model):
     )
     comment = models.TextField(_("comment"), max_length=COMMENT_MAX_LENGTH)
     parent = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, related_name="child_comments"
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="child_comments",
+        blank=True,
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
