@@ -128,9 +128,7 @@ class CommentDetailView(View):
         ):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        comment = get_object_or_404(
-            Comment.objects.active(), pk=comment_id, user=request.user
-        )
+        comment = get_object_or_404(Comment.objects.active(), pk=comment_id)
 
         # validated against schema
         body = json.loads(request.body)
@@ -156,9 +154,7 @@ class CommentDetailView(View):
         if not self.perms.can_get_comment(request, content_type, object_pk, comment_id):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        comment = get_object_or_404(
-            Comment.objects.active(), pk=comment_id, user=request.user
-        )
+        comment = get_object_or_404(Comment.objects.active(), pk=comment_id)
         comment.is_active = False
         comment.save()
         return HttpResponse(status=204)  # no content
