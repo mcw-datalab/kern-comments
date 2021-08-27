@@ -42,7 +42,7 @@ VIEW_DECORATORS = [login_required]
 class CommentView(View):
     perms = get_registry().RootViewPermissions
 
-    def get_comment_queryset(self, target, request):
+    def get_queryset(self, target, request):
         return Comment.objects.for_model(target).active()
 
     def get(self, request, *args, **kwargs):
@@ -59,7 +59,7 @@ class CommentView(View):
         if target is None:
             return _build_error_response("Bad content type or object id", 404)
 
-        comments = self.get_comment_queryset(target, request)
+        comments = self.get_queryset(target, request)
         return JSONResponse(comments)
 
     def post(self, request, *args, **kwargs):
@@ -106,7 +106,7 @@ class CommentView(View):
 class CommentDetailView(View):
     perms = get_registry().DetailViewPermissions
 
-    def get_comment_queryset(self, request):
+    def get_queryset(self, request):
         return Comment.objects.active()
 
     def get(self, request, *args, **kwargs):
@@ -118,7 +118,7 @@ class CommentDetailView(View):
         if not self.perms.can_get_comment(request, content_type, object_pk, comment_id):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        comment = get_object_or_404(self.get_comment_queryset(request), pk=comment_id)
+        comment = get_object_or_404(self.get_queryset(request), pk=comment_id)
         return JSONResponse(comment)
 
     def put(self, request, *args, **kwargs):
@@ -132,7 +132,7 @@ class CommentDetailView(View):
         ):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        comment = get_object_or_404(self.get_comment_queryset(request), pk=comment_id)
+        comment = get_object_or_404(self.get_queryset(request), pk=comment_id)
 
         # validated against schema
         body = json.loads(request.body)
@@ -158,7 +158,7 @@ class CommentDetailView(View):
         if not self.perms.can_get_comment(request, content_type, object_pk, comment_id):
             return _build_error_response("Permission denied", 403)  # forbidden
 
-        comment = get_object_or_404(self.get_comment_queryset(request), pk=comment_id)
+        comment = get_object_or_404(self.get_queryset(request), pk=comment_id)
         comment.is_active = False
         comment.save()
         return HttpResponse(status=204)  # no content
