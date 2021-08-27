@@ -6,7 +6,10 @@ from django.utils.translation import gettext_lazy as _
 
 from jsonschema import validate, ValidationError
 
+from .serializers import model_to_dict
+
 COMMENT_MAX_LENGTH = getattr(settings, "COMMENT_MAX_LENGTH", 3000)
+EXCLUDE_SERIALIZE_FIELDS = ["content_object"]
 
 
 class CommentQuerySet(models.QuerySet):
@@ -84,3 +87,18 @@ class Comment(models.Model):
             return True, ""
         except ValidationError as e:
             return False, e.message
+
+    def to_dict(self):
+        d = model_to_dict(self, exclude=EXCLUDE_SERIALIZE_FIELDS)
+        d.update(
+            {
+                "user_name": self.user.get_full_name(),
+                "formatted_creation_datetime": self.creation_date.strftime(
+                    "%Y-%m-%d %H:%M"
+                ),
+                "formatted_modified_datetime": self.creation_date.strftime(
+                    "%Y-%m-%d %H:%M"
+                ),
+            }
+        )
+        return d
