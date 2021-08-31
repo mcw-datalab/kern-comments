@@ -2,6 +2,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.db import models
+from django.template.defaultfilters import linebreaks_filter
 from django.utils.translation import gettext_lazy as _
 
 from jsonschema import validate, ValidationError
@@ -92,6 +93,7 @@ class Comment(models.Model):
         d = model_to_dict(self, exclude=EXCLUDE_SERIALIZE_FIELDS)
         d.update(
             {
+                "comment": linebreaks_filter(self.comment, autoescape=False),
                 "user_name": self.user.get_full_name(),
                 "formatted_creation_datetime": self.creation_date.strftime(
                     "%Y-%m-%d %H:%M"

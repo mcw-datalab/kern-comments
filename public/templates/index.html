@@ -23,7 +23,7 @@
           <template x-for="comment in Object.values(comments)">
             <li>
               <div x-show="editID !== comment.id">
-                <p x-text="comment.comment"></p>
+                <div x-html="comment.comment"></div>
                 <button x-on:click="editID = comment.id">Edit</button
                 >&nbsp;<button x-on:click="remove(comment.id)">Delete</button>
               </div>
